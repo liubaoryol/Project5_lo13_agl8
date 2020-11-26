@@ -1,107 +1,100 @@
 ///////////////////////////////////////
 // COMP/ELEC/MECH 450/550
-// Project 3
-// Authors: Robert Black and Liubove Orlov Savko
+// Project 5
+// Authors: Liubove Orlov Savko and Alex Liapis
 //////////////////////////////////////
 
-#include "RTP.h"
-#include "CollisionChecking.h"
+#include "ompl/geometric/planners/rrt/RRT.h"
 #include <limits>
 #include "ompl/base/goals/GoalSampleableRegion.h"
 #include "ompl/tools/config/SelfConfig.h"
-#include <vector>
-#include <ompl/geometric/PathGeometric.h>
 
-
-
-ompl::geometric::RTP::RTP(const ompl::base::SpaceInformationPtr &si) : ompl::base::Planner(si, "RTP")
+namespace og = ompl::geometric;
+ompl::geometric::RRT::RRT(const base::SpaceInformationPtr &si, bool addIntermediateStates, og::PRM::Graph roadmap)
+  : base::Planner(si, addIntermediateStates ? "RRTintermediate" : "RRT")
 {
     specs_.approximateSolutions = true;
     specs_.directed = true;
 
-    Planner::declareParam<double>("range", this, &RTP::setRange, &RTP::getRange, "0.:1.:10000.");
-    Planner::declareParam<double>("goal_bias", this, &RTP::setGoalBias, &RTP::getGoalBias, "0.:.05:1.");
+    Planner::declareParam<double>("range", this, &RRT::setRange, &RRT::getRange, "0.:1.:10000.");
+    Planner::declareParam<double>("goal_bias", this, &RRT::setGoalBias, &RRT::getGoalBias, "0.:.05:1.");
+    Planner::declareParam<bool>("intermediate_states", this, &RRT::setIntermediateStates, &RRT::getIntermediateStates,
+                                "0,1");
 
+    addIntermediateStates_ = addIntermediateStates;
 }
 
-ompl::geometric::RTP::~RTP()
+ompl::geometric::RRT::~RRT()
 {
     freeMemory();
 }
 
-void ompl::geometric::RTP::clear()
+void ompl::geometric::RRT::clear()
 {
     Planner::clear();
     sampler_.reset();
     freeMemory();
+    if (nn_)
+        nn_->clear();
     lastGoalMotion_ = nullptr;
-
-    for(auto &motion : tree)
-    {
-        if(motion->state != nullptr)
-            si_->freeState(motion->state);
-        delete motion;
-    }
-    tree.clear();
 }
 
-
-void ompl::geometric::RTP::setup()
+void ompl::geometric::RRT::setup()
 {
     Planner::setup();
     tools::SelfConfig sc(si_, getName());
     sc.configurePlannerRange(maxDistance_);
 
+    if (!nn_)
+        nn_.reset(tools::SelfConfig::getDefaultNearestNeighbors<Motion *>(this));
+    nn_->setDistanceFunction([this](const Motion *a, const Motion *b) { return distanceFunction(a, b); });
 }
 
-
-
-void ompl::geometric::RTP::freeMemory()
+void ompl::geometric::RRT::freeMemory()
 {
-    for(auto &motion : tree)
+    if (nn_)
     {
-        if(motion->state != nullptr)
-            si_->freeState(motion->state);
-        delete motion;
+        std::vector<Motion *> motions;
+        nn_->list(motions);
+        for (auto &motion : motions)
+        {
+            if (motion->state != nullptr)
+                si_->freeState(motion->state);
+            delete motion;
+        }
     }
-    tree.clear();
 }
 
-
-ompl::base::PlannerStatus ompl::geometric::RTP::solve(const ompl::base::PlannerTerminationCondition &ptc)
+ompl::base::PlannerStatus ompl::geometric::RRT::solve(const base::PlannerTerminationCondition &ptc)
 {
     checkValidity();
-    ompl::base::Goal *goal = pdef_->getGoal().get();
-    auto *goal_s = dynamic_cast<ompl::base::GoalSampleableRegion *>(goal);
+    base::Goal *goal = pdef_->getGoal().get();
+    auto *goal_s = dynamic_cast<base::GoalSampleableRegion *>(goal);
 
-
-    while (const ompl::base::State *st = pis_.nextStart())
+    while (const base::State *st = pis_.nextStart())
     {
         auto *motion = new Motion(si_);
         si_->copyState(motion->state, st);
-        //nn_->add(motion);
-        tree.push_back(motion);
+        nn_->add(motion);
     }
 
-    
-    if (tree.size() == 0)
+    if (nn_->size() == 0)
     {
         OMPL_ERROR("%s: There are no valid initial states!", getName().c_str());
-        return ompl::base::PlannerStatus::INVALID_START;
+        return base::PlannerStatus::INVALID_START;
     }
-    
 
     if (!sampler_)
         sampler_ = si_->allocStateSampler();
 
-    OMPL_INFORM("%s: Starting planning with %u states already in datastructure", getName().c_str(), tree.size());
+    OMPL_INFORM("%s: Starting planning with %u states already in datastructure", getName().c_str(), nn_->size());
 
     Motion *solution = nullptr;
     Motion *approxsol = nullptr;
     double approxdif = std::numeric_limits<double>::infinity();
     auto *rmotion = new Motion(si_);
-    ompl::base::State *rstate = rmotion->state;
-
+    base::State *rstate = rmotion->state;
+    base::State *xstate = si_->allocState();
 
     while (!ptc)
     {
@@ -111,20 +104,48 @@ ompl::base::PlannerStatus ompl::geometric::RTP::solve(const ompl::base::PlannerT
         else
             sampler_->sampleUniform(rstate);
 
+        /* find closest state in the tree */
+        Motion *nmotion = nn_->nearest(rmotion);
+        base::State *dstate = rstate;
 
-        /* find random state in the tree */
-        Motion *nmotion = tree[rng_.uniformInt(0, tree.size()-1)];    
+        /* find state to add */
+        double d = si_->distance(nmotion->state, rstate);
+        if (d > maxDistance_)
+        {
+            si_->getStateSpace()->interpolate(nmotion->state, rstate, maxDistance_ / d, xstate);
+            dstate = xstate;
+        }
 
-	    //add motion to tree if valid
-        if(si_->checkMotion(nmotion->state, rstate)){
-            auto *motion = new Motion(si_);
-            si_->copyState(motion->state, rstate);
-            motion->parent = nmotion;
-            tree.push_back(motion);
+        if (si_->checkMotion(nmotion->state, dstate))
+        {
+            if (addIntermediateStates_)
+            {
+                std::vector<base::State *> states;
+                const unsigned int count = si_->getStateSpace()->validSegmentCount(nmotion->state, dstate);
 
-            nmotion = motion;
+                if (si_->getMotionStates(nmotion->state, dstate, states, count, true, true))
+                    si_->freeState(states[0]);
 
-            //checks if goal condition is satisfied
+                for (std::size_t i = 1; i < states.size(); ++i)
+                {
+                    auto *motion = new Motion;
+                    motion->state = states[i];
+                    motion->parent = nmotion;
+                    nn_->add(motion);
+
+                    nmotion = motion;
+                }
+            }
+            else
+            {
+                auto *motion = new Motion(si_);
+                si_->copyState(motion->state, dstate);
+                motion->parent = nmotion;
+                nn_->add(motion);
+
+                nmotion = motion;
+            }
+
             double dist = 0.0;
             bool sat = goal->isSatisfied(nmotion->state, &dist);
             if (sat)
@@ -169,30 +190,32 @@ ompl::base::PlannerStatus ompl::geometric::RTP::solve(const ompl::base::PlannerT
         solved = true;
     }
 
+    si_->freeState(xstate);
     if (rmotion->state != nullptr)
         si_->freeState(rmotion->state);
     delete rmotion;
 
-    OMPL_INFORM("%s: Created %u states", getName().c_str(), tree.size());
+    OMPL_INFORM("%s: Created %u states", getName().c_str(), nn_->size());
 
     return {solved, approximate};
 }
 
-void ompl::geometric::RTP::getPlannerData(ompl::base::PlannerData &data) const
+void ompl::geometric::RRT::getPlannerData(base::PlannerData &data) const
 {
     Planner::getPlannerData(data);
 
     std::vector<Motion *> motions;
-    motions = tree;
+    if (nn_)
+        nn_->list(motions);
 
     if (lastGoalMotion_ != nullptr)
-        data.addGoalVertex(ompl::base::PlannerDataVertex(lastGoalMotion_->state));
+        data.addGoalVertex(base::PlannerDataVertex(lastGoalMotion_->state));
 
     for (auto &motion : motions)
     {
         if (motion->parent == nullptr)
-            data.addStartVertex(ompl::base::PlannerDataVertex(motion->state));
+            data.addStartVertex(base::PlannerDataVertex(motion->state));
         else
-            data.addEdge(ompl::base::PlannerDataVertex(motion->parent->state), ompl::base::PlannerDataVertex(motion->state));
+            data.addEdge(base::PlannerDataVertex(motion->parent->state), base::PlannerDataVertex(motion->state));
     }
 }

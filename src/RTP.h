@@ -1,25 +1,25 @@
 \
 ///////////////////////////////////////
 // COMP/ELEC/MECH 450/550
-// Project 3
-// Authors: FILL ME OUT!!
+// Project 5
+// Authors: Alex Liapis and Liubove Orlov Savko
 //////////////////////////////////////
-
-#ifndef RANDOM_TREE_H
-#define RANDOM_TREE_H
-#include <ompl/base/Planner.h>
-
-
+#ifndef OMPL_GEOMETRIC_PLANNERS_RRT_RRT_
+ #define OMPL_GEOMETRIC_PLANNERS_RRT_RRT_
+  
+ #include "ompl/datastructures/NearestNeighbors.h"
+ #include "ompl/geometric/planners/PlannerIncludes.h"
+  
  namespace ompl
  {
      namespace geometric
      {
-         class RTP : public base::Planner
+         class RRT : public base::Planner
          {
          public:
-             RTP(const base::SpaceInformationPtr &si);
+             RRT(const base::SpaceInformationPtr &si, bool addIntermediateStates = false);
   
-             ~RTP() override;
+             ~RRT() override;
   
              void getPlannerData(base::PlannerData &data) const override;
   
@@ -37,7 +37,6 @@
                  return goalBias_;
              }
   
-	     /*
              bool getIntermediateStates() const
              {
                  return addIntermediateStates_;
@@ -47,7 +46,6 @@
              {
                  addIntermediateStates_ = addIntermediateStates;
              }
-             */
   
              void setRange(double distance)
              {
@@ -58,19 +56,16 @@
              {
                  return maxDistance_;
              }
-	     
-
-            /*
+  
              template <template <typename T> class NN>
              void setNearestNeighbors()
              {
-                 if (nn_ ptc&& nn_->size() != 0)
+                 if (nn_ && nn_->size() != 0)
                      OMPL_WARN("Calling setNearestNeighbors will clear all states.");
                  clear();
                  nn_ = std::make_shared<NN<Motion *>>();
                  setup();
              }
-	     */
   
              void setup() override;
   
@@ -100,14 +95,13 @@
   
              base::StateSamplerPtr sampler_;
   
-             //std::shared_ptr<NearestNeighbors<Motion *>> nn_;
-             std::vector<Motion *> tree;
+             std::shared_ptr<NearestNeighbors<Motion *>> nn_;
   
              double goalBias_{.05};
   
              double maxDistance_{0.};
   
-             //bool addIntermediateStates_;
+             bool addIntermediateStates_;
   
              RNG rng_;
   

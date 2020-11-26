@@ -1,13 +1,14 @@
 ///////////////////////////////////////
 // COMP/ELEC/MECH 450/550
-// Project 3
-// Authors: Robert Black and Liubove Orlov Savko
+// Project 5
+// Authors: Liubove Orlov Savko and Alex Liapis
 //////////////////////////////////////
 
 #include <iostream>
 #include <fstream>
 #include "CollisionChecking.h"
 #include "RTP.h"
+#include <ompl/geometric/planners/prm/PRM.h>
 #include <ompl/base/spaces/SE2StateSpace.h>
 #include <ompl/geometric/SimpleSetup.h>
 #include <ompl/base/SpaceInformation.h>
@@ -15,6 +16,39 @@
 using namespace ompl;
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
+
+og::PRM::Graph get_roadmap_robot(){
+    //Point robot in R^2
+    dim = 2
+    auto space(std::make_shared<ob::RealVectorStateSpace>(dim));
+
+    ob::RealVectorBounds bounds(dim);
+    bounds.setLow(-10);
+    bounds.setHigh(10);
+    space->setBounds(bounds);
+
+    og::SimpleSetup ss(space);
+
+    ss.setStateValidityChecker(std::bind(isValidStatePoint, std::placeholders::_1, obstacles));
+
+    //How to account for all starting states of the n robots? So that each state is in the roadmap PRM
+    ob::ScopedState<> start(space);
+    start.random();
+
+    ob::ScopedState<> goal(space);
+    goal.random()
+
+    ss.setStartAndGoalStates(start, goal);
+
+    //auto si = std::make_shared<ob::SpaceInformation>(space);
+    auto prm = std::make_shared<og::PRM>(ss.getSpaceInformation());
+    ss.setPlanner(prm);
+
+    return prm.getRoadmap() 
+
+}
+
+
 
 void planPoint(const std::vector<Rectangle> &obstacles)
 {
@@ -42,8 +76,9 @@ void planPoint(const std::vector<Rectangle> &obstacles)
 
     ss.setStartAndGoalStates(start, goal);
 
+    og::PRM::Graph roadmap = get_roadmap_robot();
     //auto si = std::make_shared<ob::SpaceInformation>(space);
-    auto rtp = std::make_shared<og::RTP>(ss.getSpaceInformation());
+    auto rtp = std::make_shared<og::RTP>(ss.getSpaceInformation(), roadmap);
     ss.setPlanner(rtp);
 
 
