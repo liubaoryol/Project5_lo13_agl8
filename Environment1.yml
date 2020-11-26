@@ -1,0 +1,62 @@
+robot:
+  - name: "point"
+    joint: "translate"
+    limits:
+      upper: [ 10,  10]
+      lower: [-10, -10]
+    geometry:
+      - type: "circle"
+        dimensions: [0.1]
+
+  - name: "obstacle_1"
+    joint: "fixed"
+    geometry: 
+      - type: "box"
+        dimensions: [1, 1]
+        offset: [-11, -8, 0]
+        color: [0.5, 0.3, 0.2, 1]
+
+  - name: "obstacle_2"
+    joint: "fixed"
+    geometry: 
+      - type: "box"
+        dimensions: [5, 1]
+        offset: [-2, -4, 0]
+        color: [0.5, 0.3, 0.2, 1]
+
+  - name: "obstacle_3"
+    joint: "fixed"
+    geometry: 
+      - type: "box"
+        dimensions: [1.5, 1.5]
+        offset: [-1.5, 7.5, 0]
+        color: [0.5, 0.3, 0.2, 1]
+
+  - name: "obstacle_4"
+    joint: "fixed"
+    geometry: 
+      - type: "box"
+        dimensions: [5, 2]
+        offset: [5, 0.25, 0]
+        color: [0.5, 0.3, 0.2, 1]
+
+  - name: "obstacle_5"
+    joint: "fixed"
+    geometry: 
+      - type: "box"
+        dimensions: [0.5, 2.5]
+        offset: [0, -7.5, 0]
+        color: [0.5, 0.3, 0.2, 1]
+
+
+
+states:
+  - name: "start"
+    configuration:
+    - frame: "point"
+      value: [-8, 8]
+
+  - name: "goal"
+    configuration:
+    - frame: "point"
+      value: [1,1]
