@@ -1,75 +1,116 @@
-from turtle import *
-import numpy as np
+#!/usr/bin/env python
+from mpl_toolkits.mplot3d import Axes3D, art3d
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import sys
-import math
+from math import sin, cos
 
-# Constant parameters of window size and scale, and data filenames
-PATH_FN = "path.txt"
-OBSTACLES_FN = "obstacles.txt"
-ENV_FN = "boundary.gif"
-ENV_X = 500
-ENV_Y = 500
-ENV_SCALE = 500
-TITLE = b"Environment Visualization"
-PIXELS_PER_UNIT = ENV_SCALE/20
 
-# Numpy loads data to a nested array
-obstacles = np.loadtxt(OBSTACLES_FN)
-path = np.loadtxt(PATH_FN)
-
-s = Screen()
-s.setup(width=ENV_X+50, height=ENV_Y+50)
-s.delay(0)
-s.tracer(0,0)
-s.bgpic(ENV_FN)
-s.title(TITLE)
-
-t = Turtle() # The robot
-t.speed(0)
-rw = path[0][0]*PIXELS_PER_UNIT
-rh = path[0][1]*PIXELS_PER_UNIT
-# Draw square of dimensions specified in first line of path file
-s.addshape("robot", ((-rw/2, -rh/2), (rw/2, -rh/2), (rw/2, rh/2), (-rw/2, rh/2)))
-t.shape("robot")
-t.pensize(3)
-t.fillcolor("orange")
-t.pencolor("black")
-
-tobs = []
-for i, obstacle in enumerate(obstacles[1:]): # Ignore "header" first line of obstacle file
-    o = Turtle()
-    o.seth(90) # Zero is pointing right, which is incorrect
-    tobs.append(o)
-    x = obstacle[0]*PIXELS_PER_UNIT
-    y = obstacle[1]*PIXELS_PER_UNIT
-    w = obstacle[2]*PIXELS_PER_UNIT
-    h = obstacle[3]*PIXELS_PER_UNIT
-    s.addshape(str(i), ((0, 0), (w, 0), (w, h), (0, h)))
-    o.shape(str(i))
-    o.fillcolor("red")
-    o.pencolor("black")
-    o.up()
-    o.setpos(x, y)
+def obstacleOnGraph(graph, file_name):
+    ''' Draws the obstacles on a given graph
+    Args:
+        graph (plt.figure) 
+        file_name (str)
+    '''
+    obstacles_temp = []
+    for line in open(file_name):
+        if len(line.rstrip()) > 0:
+            obstacles_temp.append(line)
+    obstacles = []
+    for obstacle in obstacles_temp:
+        points = obstacle.split(' ')
+        obstacles.append([float(x) for x in points])
+        
+    # Adding obstacles to graph
+    for obstacle in obstacles:
+        graph.add_patch(patches.Rectangle((obstacle[0], obstacle[1]), obstacle[2], obstacle[3], fill='false', color='black'))
     
-trace_c = 1
-def trace(): # Jump to the next state along path for a simple animation
-    global trace_c
-    if trace_c == 1:
-        t.up()
-        t.clearstamps()
-    else:
-        t.down()
-    x = path[trace_c][0]*PIXELS_PER_UNIT
-    y = path[trace_c][1]*PIXELS_PER_UNIT
-    t.setpos(x, y)
-    # Set heading (radians to degrees here)
-    t.seth((path[trace_c][2] * 180 / math.pi) + 90) # rads to degs
-    t.stamp()
-    trace_c += 1
-    if trace_c > len(path) - 1: # restart
-        trace_c = 1
-    s.update()
-    s.ontimer(trace, 10)
+    plt.axis([-10, 10, -10, 10])
+    # plt.plot(-1.3, -1.3, 'go') # source
+    # plt.plot(1.2, 1.2, 'ro') # destination
 
-trace()
-s.mainloop()
+
+
+def plotRobots(obstacle_path, path):
+    '''
+    Args:
+        obstacle_path (str) a .txt file
+        path (str) a .txt file
+    
+    '''
+    lines = []
+    for line in open(path):
+        if len(line.rstrip()) > 0:
+            lines.append(line)
+
+    traject = []
+    for line in lines[1:]:
+        points = line.split(' ')
+        if '\n' in points[-1]:
+            traject.append([float(x) for x in points[:-1]])
+
+
+    fig = plt.figure()
+    graph = fig.gca()
+    obstacleOnGraph(graph, obstacle_path)
+
+    for i in range(0,4):
+        # The first 8 points in `path` correspond to the robot's positions
+        X = [p[i*2] for p in traject]
+        Y = [p[i*2+1] for p in traject]
+        graph.plot(X, Y)
+
+        # Plotting the actual box
+        boxVert = [[-0.3, -0.3], [0.3, -0.3], [0.3, 0.3], [-0.3, 0.3], [-0.3, -0.3]]
+
+        for p in traject:
+            x = []
+            y = []
+            for v in boxVert:
+                x.append(v[0] * cos(p[i+8]) - v[1] * sin(p[i+8]) + p[i*2])
+                y.append(v[0] * sin(p[i+8]) + v[1] * cos(p[i+8]) + p[i*2+1])
+            graph.plot(x, y, 'k')
+
+    plt.show()
+
+def plotRoadmap(obstacle_path, roadmap):
+    '''
+    Plot the resulting PRM
+    '''
+    fig = plt.figure()
+    graph = fig.gca()
+    
+    obstacleOnGraph(graph, obstacle_filename)
+
+    X = [p[0] for p in path]
+    Y = [p[1] for p in path]
+    graph.plot(X, Y, 'go')
+    
+    plt.axis([-10, 10, -10, 10])
+    plt.show()
+
+
+
+if __name__ == '__main__':
+    print ("sys args is: ", sys.argv)
+    if len(sys.argv) == 2:
+        filename = sys.argv[1]
+    elif len(sys.argv) == 3:
+        obstacle_filename = sys.argv[1]
+        filename = sys.argv[2]
+    else:
+        print ('please input file name')
+#        filename = 'path.txt'
+
+    cspace, path = readPath(filename)
+    print ("cspace is: ", cspace)
+    if cspace == 'R2':
+        plotR2(path)
+    elif cspace == 'SE2':
+        plotSE2(obstacle_filename, path)
+    elif cspace == 'SE8':
+        plotSE8(obstacle_filename, path)
+    elif cspace == 'Roadmap':
+        plotRoadmap(obstacle_filename, path)
+    elif cspace == 'Weird':
+        plotWeird(path)
