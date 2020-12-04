@@ -68,25 +68,25 @@ void planMultipleRobots(std::vector<Rectangle> & obstacles)
     ss.setPlanner(planner);
 
     /* Goal & start states */
-    int r1startX = -5;
-    int r1startY = 4;
-    int r1goalX = -3;
-    int r1goalY = 4;
+    int r1startX = -10.0;
+    int r1startY = 5.0;
+    int r1goalX = 8.0;
+    int r1goalY = 5.0;
 
-    int r2startX = -3;
-    int r2startY = 4;
-    int r2goalX = -5;
-    int r2goalY = 4;
+    int r2startX = -8.0;
+    int r2startY = 5.0;
+    int r2goalX = 6.0;
+    int r2goalY = 5.0;
 
-    int r3startX = 1;
-    int r3startY = 4;
-    int r3goalX = 3;
-    int r3goalY = 4;
+    int r3startX = 6.0;
+    int r3startY = 5.0;
+    int r3goalX = -10.0;
+    int r3goalY = 5.0;
 
-    int r4startX = 3;
-    int r4startY = 4;
-    int r4goalX = 1;
-    int r4goalY = 4;
+    int r4startX = 8.0;
+    int r4startY = 5.0;
+    int r4goalX = -8.0;
+    int r4goalY = 5.0;
 
     /* Run the robot 1 PRM */
     ob::ScopedState<> r1Start(se2);
