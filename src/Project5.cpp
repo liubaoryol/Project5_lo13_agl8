@@ -35,6 +35,7 @@ void outputObstacles(std::vector<Rectangle> &obstacles) {
           fout << std::to_string(obstacleRect.width) + " ";
           fout << std::to_string(obstacleRect.height) << std::endl;
       }
+}
     
 void makeEnvironment1(std::vector<Rectangle> &obstacles)
 {
