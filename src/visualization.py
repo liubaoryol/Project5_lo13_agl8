@@ -61,7 +61,7 @@ def plotRobots(obstacle_path, path):
         graph.plot(X, Y)
 
         # Plotting the actual box
-        boxVert = [[-1.5, -1.5], [1.5, -1.5], [1.5, 1.5], [-1.5, 1.5], [-1.5, -1.5]]
+        boxVert = [[-0.3, -0.3], [0.3, -0.3], [0.3, 0.3], [-0.3, 0.3], [-0.3, -0.3]]
 
         for p in traject:
             x = []
@@ -72,20 +72,3 @@ def plotRobots(obstacle_path, path):
             graph.plot(x, y, 'k')
 
     plt.show()
-
-def plotRoadmap(obstacle_path, roadmap):
-    '''
-    Plot the resulting PRM
-    '''
-    fig = plt.figure()
-    graph = fig.gca()
-    
-    obstacleOnGraph(graph, obstacle_filename)
-
-    X = [p[0] for p in path]
-    Y = [p[1] for p in path]
-    graph.plot(X, Y, 'go')
-    
-    plt.axis([-10, 10, -10, 10])
-    plt.show()
-
