@@ -25,6 +25,17 @@ namespace og = ompl::geometric;
 
 const double sideLen = 0.1;
 
+void outputObstacles(std::vector<Rectangle> &obstacles) {
+      // Write the obstacles to a file for visualization
+      std::ofstream fout("obstacles.txt");
+      fout << "0 0 0 0" << std::endl; // header of sorts, so as not to confuse numpy with a one-line file
+      for (auto obstacleRect : obstacles) {
+          fout << std::to_string(obstacleRect.x) + " ";
+          fout << std::to_string(obstacleRect.y) + " ";
+          fout << std::to_string(obstacleRect.width) + " ";
+          fout << std::to_string(obstacleRect.height) << std::endl;
+      }
+    
 void makeEnvironment1(std::vector<Rectangle> &obstacles)
 {
     struct Rectangle r1 = {-5.5, 5, 1, 5};
@@ -32,6 +43,7 @@ void makeEnvironment1(std::vector<Rectangle> &obstacles)
     struct Rectangle r3 = {5, -7.5, 1, 11.5};
 
     obstacles.insert(obstacles.end(),  {r1, r2, r3});
+    outputObstacles(obstacles);
 
 }
 
@@ -41,6 +53,7 @@ void makeEnvironment2(std::vector<Rectangle> &obstacles)
     struct Rectangle r2 = {-1, -10, 2, 9};
 
     obstacles.insert(obstacles.end(),  {r1, r2});
+    outputObstacles(obstacles);
 }
 
 void planMultipleRobots(std::vector<Rectangle> & obstacles)
