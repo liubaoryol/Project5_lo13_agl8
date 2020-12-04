@@ -18,251 +18,18 @@ namespace ob = ompl::base;
 namespace og = ompl::geometric;
 
 
-void planPoint(const std::vector<Rectangle> &obstacles)
-{
-    int nbr_robots = 4;
-    int dim = pow(2,4);
-    //bool isStateValid(const ob::State *state)
-    // construct the state space we are planning in
-    auto space(std::make_shared<ob::RealVectorStateSpace>(dim));
-
-    ob::RealVectorBounds bounds(dim);
-    bounds.setLow(-10);
-    bounds.setHigh(10);
-    space->setBounds(bounds);
-
-    og::SimpleSetup ss(space);
-
-    ss.setStateValidityChecker(std::bind(isValidStatePoint, std::placeholders::_1, obstacles));
-
-
-    ob::ScopedState<> start(space);
-    start.random();
-
-    ob::ScopedState<> goal(space);
-    goal.random()
-
-    ss.setStartAndGoalStates(start, goal);
-
-    og::PRM::Graph roadmap = get_roadmap_robot();
-    //auto si = std::make_shared<ob::SpaceInformation>(space);
-    auto rtp = std::make_shared<og::RTP>(ss.getSpaceInformation(), roadmap);
-    ss.setPlanner(rtp);
-
-
-    ob::PlannerStatus solved = ss.solve(5.0);
-    if (solved)
-    {
-        std::cout << "Found solution:" << std::endl;
-
-        ss.simplifySolution();
-        //ss.getSolutionPath().print(std::cout);
-        og::PathGeometric &path = ss.getSolutionPath();
-        path.interpolate(50);
-        path.printAsMatrix(std::cout);
-
-        std::ofstream fout("path.txt");
-        fout << "R2" << std::endl;
-        path.printAsMatrix(fout);
-        fout.close();
-    }
-    else
-    {
-        std::cout << "No solution found" << std::endl;
-    }
-}
-
-
-bool isStateValid(const oc::SpaceInformation *si, const ob::State *state, const std::vector<Rectangle> &obstacles )
- {
-    // Cast the state to a real vector state
-    auto compound_state = state->as<ompl::base::CompoundState>();
-    const ompl::base::RealVectorStateSpace::StateType* r2;
-    r2 = compound_state->as<ompl::base::RealVectorStateSpace::StateType>(0);
-    std::bind(isValidStateSquare, std::placeholders::_1, sideLen, obstacles)
-    
-    bool bool_r1, boolr2, bool_r3, bool_r4;
-
-    bool1 = isValidStateSquare(state, sideLen, obstacles);
-    bool2 = isValidStateSquare(state, sideLen, obstacles);
-    bool3 = isValidStateSquare(state, sideLen, obstacles);
-    bool4 = isValidStateSquare(state, sideLen, obstacles);
-
-    return si->satisfiesBounds(state) && isValidStatePoint(r2, obstacles);
- }
-
-
-void compositeRoadmap(const std::vector<Rectangle> &obstacles)
-{
-    ''' 
-    Create a composite roadmap for four square robots of length 0.9; a little smaller than the passages
-    '''
-    // Robot side length
-    double sideLen = 0.9; 
-    // Create workspace
-    auto space(std::make_shared<ob::SE2StateSpace>());
-
-    ob::RealVectorBounds bounds(2);
-    bounds.setLow(0,-2.5);
-    bounds.setLow(1, 0);
-    bounds.setHigh(0, 2.5);
-    bounds.setHigh(1, 3);
-    space->setBounds(bounds);
-    
-    og::SimpleSetup ss(space);
-
-    ss.setStateValidityChecker(std::bind(isValidStateSquare, std::placeholders::_1, sideLen, obstacles));
-
-    //ssptr->setStateValidityChecker(
-      //  [&ss, &obstacles](const ob::State *state) { return isStateValid(ss.getSpaceInformation().get(), state, obstacles); });
-
-    ob::ScopedState<> start(space);
-    start[0] = -2.5;
-    start[1] = 2;
-    start[2] = 0;
-     
-    ob::ScopedState<> goal(space);
-    goal[0] = -1.5;
-    goal[1] = 2;
-    goal[2] = 0;
-
-
-
-    ss.setStartAndGoalStates(start, goal);
-
-    // Since all robots are the same moving in the same workspace, we will use one PRM
-    //auto si = std::make_shared<ob::SpaceInformation>(space);
-    auto prm = std::make_shared<og::PRM>(ss.getSpaceInformation());
-    ss.setPlanner(prm);
-
-
-    ob::PlannerStatus solved = ss.solve(5.0);
-
-    auto plannerData = std::make_shared<ob::PlannerData>(ss.getSpaceInformation());
-    prm->getPlannerData(*plannerData);
-
-    // Create composite roadmap
-    std::vector<const ob::State*> roadmap;
-
-    for ( int i = 0; i < plannerData->numVertices(); i++) {
-        const ob::State *st = plannerData->getVertex(i).getState();
-        // Add vertex into roadMap
-        roadmap.push_back(st);
-
-        const ob::CompoundStateSpace::StateType& cs = *st->as<ob::CompoundStateSpace::StateType>();
-        const ob::RealVectorStateSpace::StateType& pos = *cs.as<ob::RealVectorStateSpace::StateType>(0);
-        std::cout << pos[0] << " " << pos[1] << std::endl;
-    }                
-
-
-
-    if (solved)
-    {
-        std::cout << "Found solution:" << std::endl;
-
-        ss.simplifySolution();
-        //ss.getSolutionPath().print(std::cout);
-        og::PathGeometric &path = ss.getSolutionPath();
-        path.interpolate(50);
-        path.printAsMatrix(std::cout);
-
-        std::ofstream fout("path.txt");
-        fout << "R2" << std::endl;
-        path.printAsMatrix(fout);
-        fout.close();
-    }
-    else
-        std::cout << "No solution found" << std::endl;
-}
-
-
-
-void makeEnvironment1(std::vector<Rectangle> &obstacles)
-{
-    struct Rectangle r1 = {-2.5, 0, 2, 2};
-    struct Rectangle r2 = {0.5, 0, 2, 2};
-
-    obstacles.insert(obstacles.end(),  {r1, r2});
-}
-
-void makeEnvironment2(std::vector<Rectangle> &obstacles)
-{
-    struct Rectangle r1 = {-7.5, 5, 7, 2};
-    struct Rectangle r2 = {-7.5, -7, 7, 2};
-    struct Rectangle r3 = {-2.5, -5, 2, 10};
-    struct Rectangle r4 = {1, -1, 5, 2};
-    struct Rectangle r5 = {6, -4, 2, 8};
-
-    obstacles.insert(obstacles.end(),  {r1, r2, r3, r4, r5});
-}
-
-int main(int /* argc */, char ** /* argv */)
-{
-    int robot, choice;
-    std::vector<Rectangle> obstacles;
-
-    do
-    {
-        std::cout << "Plan for: " << std::endl;
-        std::cout << " (1) A point in 2D" << std::endl;
-        std::cout << " (2) A rigid box in 2D" << std::endl;
-
-        std::cin >> robot;
-    } while (robot < 1 || robot > 2);
-
-    do
-    {
-        std::cout << "In Environment: " << std::endl;
-        std::cout << " (1) Environment 1" << std::endl;
-        std::cout << " (2) Environment 2" << std::endl;
-
-        std::cin >> choice;
-    } while (choice < 1 || choice > 2);
-
-    switch (choice)
-    {
-        case 1:
-            makeEnvironment1(obstacles);
-            break;
-        case 2:
-            makeEnvironment2(obstacles);
-            break;
-        default:
-            std::cerr << "Invalid Environment Number!" << std::endl;
-            break;
-    }
-
-    switch (robot)
-    {
-        case 1:
-            planPoint(obstacles);
-            break;
-        case 2:
-            planBox(obstacles);
-            break;
-        default:
-            std::cerr << "Invalid Robot Type!" << std::endl;
-            break;
-    }
-
-    return 0;
-}
-
-
-
-
 void planMultipleRobots(std::vector<Rectangle> & obstacles)
 {    ''' 
     Create a composite roadmap for four square robots of length 0.9; a little smaller than the passages
     '''
     // Robot side length
-    double sideLen = 0.9; 
+    double sideLen = 1.5; 
     // Create workspace
     auto space(std::make_shared<ob::SE2StateSpace>());
 
     ob::RealVectorBounds bounds(2);
-    bounds.setLow(-6);
-    bounds.setHigh(6);
+    bounds.setLow(10);
+    bounds.setHigh(10);
     space->setBounds(bounds);
     
     og::SimpleSetup ss(space);
@@ -408,8 +175,8 @@ void planSingleRobot(const std::vector<Rectangle> &obstacles)
 
     // We need to set bounds on R^2
     ompl::base::RealVectorBounds bounds(2);
-    bounds.setLow(-6);  // x and y have a minimum of -2
-    bounds.setHigh(6);  // x and y have a maximum of 2
+    bounds.setLow(-10);  // x and y have a minimum of -2
+    bounds.setHigh(10);  // x and y have a maximum of 2
 
     // Set the bounds on R^2
     r2->setBounds(bounds);
@@ -469,6 +236,28 @@ void planSingleRobot(const std::vector<Rectangle> &obstacles)
 }
 
 
+void makeEnvironment1(std::vector<Rectangle> &obstacles)
+{
+    struct Rectangle r1 = {-10, -10, 20, 10};
+    struct Rectangle r2 = {-10, 0, 9, 4};
+    struct Rectangle r3 = {1, 0, 9, 4};
+    struct Rectangle r4 = {-10, 6, 20, 4};
+
+    obstacles.insert(obstacles.end(),  {r1, r2});
+}
+
+void makeEnvironment2(std::vector<Rectangle> &obstacles)
+{
+    struct Rectangle r1 = {-7.5, 5, 7, 2};
+    struct Rectangle r2 = {-7.5, -7, 7, 2};
+    struct Rectangle r3 = {-2.5, -5, 2, 10};
+    struct Rectangle r4 = {1, -1, 5, 2};
+    struct Rectangle r5 = {6, -4, 2, 8};
+
+    obstacles.insert(obstacles.end(),  {r1, r2, r3, r4, r5});
+}
+
+
 int main(int /* argc */, char ** /* argv */)
 {
     // Make environment
@@ -520,3 +309,5 @@ int main(int /* argc */, char ** /* argv */)
 
     return 0;
 }
+
+
