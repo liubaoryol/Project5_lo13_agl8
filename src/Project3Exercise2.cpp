@@ -261,10 +261,8 @@ void planMultipleRobots(std::vector<Rectangle> & obstacles)
     auto space(std::make_shared<ob::SE2StateSpace>());
 
     ob::RealVectorBounds bounds(2);
-    bounds.setLow(0,-2.5);
-    bounds.setLow(1, 0);
-    bounds.setHigh(0, 2.5);
-    bounds.setHigh(1, 3);
+    bounds.setLow(-6);
+    bounds.setHigh(6);
     space->setBounds(bounds);
     
     og::SimpleSetup ss(space);
@@ -410,8 +408,8 @@ void planSingleRobot(const std::vector<Rectangle> &obstacles)
 
     // We need to set bounds on R^2
     ompl::base::RealVectorBounds bounds(2);
-    bounds.setLow(-10);  // x and y have a minimum of -2
-    bounds.setHigh(10);  // x and y have a maximum of 2
+    bounds.setLow(-6);  // x and y have a minimum of -2
+    bounds.setHigh(6);  // x and y have a maximum of 2
 
     // Set the bounds on R^2
     r2->setBounds(bounds);
