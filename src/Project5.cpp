@@ -27,21 +27,20 @@ const double sideLen = 0.1;
 
 void makeEnvironment1(std::vector<Rectangle> &obstacles)
 {
-    Rectangle r1 = {-2.5, 0, 2, 2};
-    Rectangle r2 = {0.5, 0, 2, 2};
+    struct Rectangle r1 = {-5.5, 5, 1, 5};
+    struct Rectangle r2 = {-5.5, 5, 10.5, 1};
+    struct Rectangle r3 = {5, -7.5, 1, 11};
 
-    obstacles.insert(obstacles.end(),  {r1, r2});
+    obstacles.insert(obstacles.end(),  {r1, r2, r3});
+
 }
 
 void makeEnvironment2(std::vector<Rectangle> &obstacles)
 {
-    struct Rectangle r1 = {-7.5, 5, 7, 2};
-    struct Rectangle r2 = {-7.5, -7, 7, 2};
-    struct Rectangle r3 = {-2.5, -5, 2, 10};
-    struct Rectangle r4 = {1, -1, 5, 2};
-    struct Rectangle r5 = {6, -4, 2, 8};
+    struct Rectangle r1 = {-1, 1, 2, 9};
+    struct Rectangle r2 = {-1, -10, 2, 9};
 
-    obstacles.insert(obstacles.end(),  {r1, r2, r3, r4, r5});
+    obstacles.insert(obstacles.end(),  {r1, r2});
 }
 
 void planMultipleRobots(std::vector<Rectangle> & obstacles)
