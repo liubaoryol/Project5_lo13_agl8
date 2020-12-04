@@ -149,23 +149,21 @@ void planMultipleRobots(std::vector<Rectangle> & obstacles)
     {
         std::cout << "Found solution:" << std::endl;
 
-        ss.simplifySolution();
-        //ss.getSolutionPath().print(std::cout);
-        og::PathGeometric &path = ss.getSolutionPath();
-        path.interpolate(50);
-        path.printAsMatrix(std::cout);
-
+        
+        ompl::geometric::PathGeometric solutionPath = ss->getSolutionPath().asGeometric();
+        solutionPath.printAsMatrix(std::cout);
+        // Write path to file for visualization
         std::ofstream fout("path.txt");
-        fout << "R2" << std::endl;
-        path.printAsMatrix(fout);
+        solutionPath.printAsMatrix(fout);
         fout.close();
+        
     }
     else
         std::cout << "No solution found" << std::endl;
 }
     
 
-void planSingleRobot(const std::vector<Rectangle> &obstacles)
+void planMultiplePRM(const std::vector<Rectangle> &obstacles)
 {
     // Step 1) Create the state (configuration) space for your system
     ompl::base::StateSpacePtr se2;
@@ -216,20 +214,15 @@ void planSingleRobot(const std::vector<Rectangle> &obstacles)
 
     if (solved)
     {
-        // Apply some heuristics to simplify (and prettify) the solution
-        ss.simplifySolution();
 
-        // print the path to screen
         std::cout << "Found solution:" << std::endl;
-        ompl::geometric::PathGeometric &path = ss.getSolutionPath();
-        path.interpolate(50);
-        path.printAsMatrix(std::cout);
-
-        // print path to file
+        ompl::geometric::PathGeometric solutionPath = ss->getSolutionPath().asGeometric();
+        solutionPath.printAsMatrix(std::cout);
+        // Write path to file for visualization
         std::ofstream fout("path.txt");
-        fout << "SE2" << std::endl;
-        path.printAsMatrix(fout);
+        solutionPath.printAsMatrix(fout);
         fout.close();
+        
     }
     else
         std::cout << "No solution found" << std::endl;
@@ -244,6 +237,8 @@ void makeEnvironment1(std::vector<Rectangle> &obstacles)
     struct Rectangle r4 = {-10, 6, 20, 4};
 
     obstacles.insert(obstacles.end(),  {r1, r2});
+
+    outputObstacles(obstacles);
 }
 
 void makeEnvironment2(std::vector<Rectangle> &obstacles)
@@ -255,7 +250,21 @@ void makeEnvironment2(std::vector<Rectangle> &obstacles)
     struct Rectangle r5 = {6, -4, 2, 8};
 
     obstacles.insert(obstacles.end(),  {r1, r2, r3, r4, r5});
+
+    outputObstacles(obstacles);
 }
+
+void outputObstacles(std::vector<Rectangle> &obstacles) {
+      // Write the obstacles to a file for visualization
+      std::ofstream fout("obstacles.txt");
+      fout << "0 0 0 0" << std::endl; // header of sorts, so as not to confuse numpy with a one-line file
+      for (auto obstacleRect : obstacles) {
+          fout << std::to_string(obstacleRect.x) + " ";
+          fout << std::to_string(obstacleRect.y) + " ";
+          fout << std::to_string(obstacleRect.width) + " ";
+          fout << std::to_string(obstacleRect.height) << std::endl;
+      }
+  }
 
 
 int main(int /* argc */, char ** /* argv */)
@@ -289,8 +298,8 @@ int main(int /* argc */, char ** /* argv */)
     do
     {
         std::cout << "Select a plan" << std::endl;
-        std::cout << " (1) Multi-robots using dRRT" << std::endl;
-        std::cout << " (2) Single robot using PRM" << std::endl;
+        std::cout << " (1) Multiple robots using dRRT" << std::endl;
+        std::cout << " (2) Multiple robot using PRM" << std::endl;
 
         std::cin >> choice;
     } while (choice != 1 && choice != 2);
