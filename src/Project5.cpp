@@ -46,37 +46,29 @@ void makeEnvironment2(std::vector<Rectangle> &obstacles)
 
 void planMultipleRobots(std::vector<Rectangle> & obstacles)
 {
-    // Create state space for the system
+    /* Create R^2 space */
     ob::StateSpacePtr se2;
-
-    // Create R^2 component of the space
     auto r2 = std::make_shared<ob::RealVectorStateSpace>(2);
 
-    // Set the bound for R^2
+    /* Set x,y bounds */
     ob::RealVectorBounds bounds(2);
     bounds.setLow(-10);
     bounds.setHigh(10);
-
-    // Set the bounds on R^2
     r2->setBounds(bounds);
 
-    // Create the SO(2) component of the state space
+    /* Create SE2 space */
     auto so2 = std::make_shared<ob::SO2StateSpace>();
-
-    // Create the compound state space
     se2 = r2 + so2;
 
-    // Create simple setup container
+    /* Simple setup for single robot */
     ompl::geometric::SimpleSetup ss(se2);
-
-    // Setup the StateValidityChecker
     ss.setStateValidityChecker(std::bind(isValidStateSquare, std::placeholders::_1, sideLen, obstacles));
 
-    // Specify a planning algorithm to use
+    /* Set PRM to generate roadmap */
     auto planner = std::make_shared<ompl::geometric::PRM>(ss.getSpaceInformation());
     ss.setPlanner(planner);
 
-    // We have 4 robots and each has its own start and goal states
+    /* Goal & start states */
     int r1startX = -5;
     int r1startY = 4;
     int r1goalX = -3;
@@ -97,124 +89,90 @@ void planMultipleRobots(std::vector<Rectangle> & obstacles)
     int r4goalX = 1;
     int r4goalY = 4;
 
-    // Specify the start and goal states for 1st robot
-    std::cout << "Robot 1 PRM" << std::endl;
+    /* Run the robot 1 PRM */
     ob::ScopedState<> r1Start(se2);
     r1Start[0] = r1startX;
     r1Start[1] = r1startY;
-
     ob::ScopedState<> r1goal(se2);
     r1goal[0] = r1goalX;
     r1goal[1] = r1goalY;
-
-    // set the start and goal states
     ss.setStartAndGoalStates(r1Start, r1goal);
-
-    // Attempt to solve the problem within the givin time
+    /* Call solve to grow roadmap, clearQuery keeps the roadmap */
     ss.solve(1.0);
     //planner->growRoadmap(5.0);
     planner->clearQuery();
 
-    // Robot2
-    std::cout << "Robot 2 PRM" << std::endl;
+    /* Robot2 PRM */
     ob::ScopedState<> r2Start(se2);
     r2Start[0] = r2startX;
     r2Start[1] = r2startY;
-
     ob::ScopedState<> r2goal(se2);
     r2goal[0] = r2goalX;
     r2goal[1] = r2goalY;
-
-    // set the start and goal states
     ss.setStartAndGoalStates(r2Start, r2goal);
-
-    // Attempt to solve the problem within the givin time
+    /* Call solve to grow roadmap, clearQuery keeps the roadmap */
     ss.solve(1.0);
-  //  planner->growRoadmap(5.0);
+    //planner->growRoadmap(5.0);
     planner->clearQuery();
 
-    // Robot3
-    std::cout << "Robot 3 PRM" << std::endl;
+    /* Robot3 PRM */
     ob::ScopedState<> r3Start(se2);
     r3Start[0] = r3startX;
     r3Start[1] = r3startY;
-
     ob::ScopedState<> r3goal(se2);
     r3goal[0] = r3goalX;
     r3goal[1] = r3goalY;
-
-    // set the start and goal states
     ss.setStartAndGoalStates(r3Start, r3goal);
-
-    // Attempt to solve the problem within the givin time
+    /* Call solve to grow roadmap, clearQuery keeps the roadmap */
     ss.solve(1.0);
-  //  planner->growRoadmap(5.0);
+    //planner->growRoadmap(5.0);
     planner->clearQuery();
 
-    // Robot4
-    std::cout << "Robot 4 PRM" << std::endl;
+    /* Robot4 PRM */
     ob::ScopedState<> r4Start(se2);
     r4Start[0] = r4startX;
     r4Start[1] = r4startY;
-
     ob::ScopedState<> r4goal(se2);
     r4goal[0] = r4goalX;
     r4goal[1] = r4goalY;
-
-    // set the start and goal states
     ss.setStartAndGoalStates(r4Start, r4goal);
-
-    // Attempt to solve the problem within the givin time
-    ss.solve(10.0);
-  //  planner->growRoadmap(5.0);
+    /* Call solve to grow roadmap, clearQuery keeps the roadmap */
+    ss.solve(1.0);
+    //planner->growRoadmap(5.0);
     planner->clearQuery();
 
     auto plannerData = std::make_shared<ob::PlannerData>(ss.getSpaceInformation());
     planner->getPlannerData(*plannerData);
 
-    // Create composite roadmap
-    std::vector<const ob::State*> roadMap;
-
+    /* Create composite roadmap with PlannerData */
+    std::vector<const ob::State*> roadmap;
     for(int i = 0; i < plannerData->numVertices(); i++) {
-        const ob::State *st = plannerData->getVertex(i).getState();
-        roadMap.push_back(st);
-
-        const ob::CompoundStateSpace::StateType& cs = *st->as<ob::CompoundStateSpace::StateType>();
-        const ob::RealVectorStateSpace::StateType& pos = *cs.as<ob::RealVectorStateSpace::StateType>(0);
+        const ob::State *roadState = plannerData->getVertex(i).getState();
+        roadmap.push_back(roadState);
     }
 
-    // We need create composite state space
-    std::cout << "Create composite state space" << std::endl;
-    // Create state space for the system
+    /* Now can start composite space */
     ob::StateSpacePtr se8;
 
-    // Create R^2 component of the space
+    /* R^2 for each robot */
     auto r8 = std::make_shared<ob::RealVectorStateSpace>(8);
-
-    // Set the bound for R^2
     ob::RealVectorBounds compositeBounds(8);
     compositeBounds.setLow(-10);
     compositeBounds.setHigh(10);
-
-    // Set the bounds on R^2
     r8->setBounds(compositeBounds);
 
-    // Create the SO(2) component for each robot
-    auto so2R1 = std::make_shared<ob::SO2StateSpace>();
-    auto so2R2 = std::make_shared<ob::SO2StateSpace>();
-    auto so2R3 = std::make_shared<ob::SO2StateSpace>();
-    auto so2R4 = std::make_shared<ob::SO2StateSpace>();
+    /* SO2 for each robot */
+    auto so2r1 = std::make_shared<ob::SO2StateSpace>();
+    auto so2r2 = std::make_shared<ob::SO2StateSpace>();
+    auto so2r3 = std::make_shared<ob::SO2StateSpace>();
+    auto so2r4 = std::make_shared<ob::SO2StateSpace>();
 
-    // Create the compound state space
-    se8 = r8 + so2R1 + so2R2 + so2R3 + so2R4;
+    /* Combine & SimpleSetup */
+    se8 = r8 + so2r1 + so2r2 + so2r3 + so2r4;
+    ompl::geometric::SimpleSetup compSS(se8);
+    compSS.setStateValidityChecker(std::bind(isValidStateSquare, std::placeholders::_1, sideLen, obstacles));
 
-    // Create simple setup container
-    ompl::geometric::SimpleSetup robotSetup(se8);
-
-    // Setup the StateValidityChecker
-    robotSetup.setStateValidityChecker(std::bind(isValidStateSquare, std::placeholders::_1, sideLen, obstacles));
-
-    // Set start and goal state for composite states
+    /* Composite goal & start states */
     ob::ScopedState<> compositeStart(se8);
     compositeStart[0] = r1startX;
     compositeStart[1] = r1startY;
@@ -234,28 +192,24 @@ void planMultipleRobots(std::vector<Rectangle> & obstacles)
     compositeGoal[5] = r3goalY;
     compositeGoal[6] = r4goalX;
     compositeGoal[7] = r4goalY;
+    compSS.setStartAndGoalStates(compositeStart, compositeGoal);
 
-    // set the start and goal states
-    robotSetup.setStartAndGoalStates(compositeStart, compositeGoal);
+    /* Init dRRT */
+    auto compPlanner = std::make_shared<ompl::geometric::dRRT>(compSS.getSpaceInformation());
+    compPlanner->setNumRobots(4);
+    compPlanner->setSideLen(sideLen);
+    compPlanner->setRoadmap(roadmap);
+    compPlanner->setRoadmapGraph(plannerData);
 
-    // Specify a planning algorithm to use
-    auto robotPlanner = std::make_shared<ompl::geometric::dRRT>(robotSetup.getSpaceInformation());
-    robotPlanner->setNumRobots(4);
-    robotPlanner->setSideLen(sideLen);
-    robotPlanner->setRoadmap(roadMap);
-    robotPlanner->setRoadmapGraph(plannerData);
+    compSS.setPlanner(compPlanner);
 
-    robotSetup.setPlanner(robotPlanner);
-
-    // Attempt to solve the problem within the givin time
-    ob::PlannerStatus solved = robotSetup.solve(60.0);
-
+    /* Attempt to solve */
+    ob::PlannerStatus solved = compSS.solve(60.0);
     if (solved)
     {
         std::cout << "Found solution:" << std::endl;
 
         ss.simplifySolution();
-        //ss.getSolutionPath().print(std::cout);
         og::PathGeometric &path = ss.getSolutionPath();
         path.interpolate(50);
         path.printAsMatrix(std::cout);

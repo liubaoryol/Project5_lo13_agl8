@@ -107,33 +107,24 @@ ompl::base::PlannerStatus ompl::geometric::dRRT::solve(const base::PlannerTermin
 
         /* find closest state in the tree */
         Motion *nmotion = nn_->nearest(rmotion);
-        base::State *dstate = rstate;
-///
+
         /* define State list for x,y,theta of each robot */
         ompl::base::ScopedState<> newState(si_);
-        // std::vector<base::SE2StateSpace::StateType>(0)> robotStates;
-        // for (int i = 0; i < numRobots_; i++) {
-        //     robotStates[i]->setX(0.0);
-        //     robotStates[i]->setY(0.0);
-        //     robotStates[i]->setYaw(0.0);
-        // }
         for (int i = 0; i < (numRobots_ * 3); i++) {
             newState[i] = 0;
         }
-///
-        // Get position coordinate for random state
+        /* Nearest state position */
         const ompl::base::CompoundStateSpace::StateType& rmotionCState = *rstate->as<ompl::base::CompoundStateSpace::StateType>();
         const ompl::base::RealVectorStateSpace::StateType& rmotionPosition = *rmotionCState.as<ompl::base::RealVectorStateSpace::StateType>(0);
-///
-        // Get position coordinate for nearest state
+
+        /* Nearest state position */
         const ompl::base::CompoundStateSpace::StateType& nmotionCState = *nmotion->state->as<ompl::base::CompoundStateSpace::StateType>();
         const ompl::base::RealVectorStateSpace::StateType& nmotionPosition = *nmotionCState.as<ompl::base::RealVectorStateSpace::StateType>(0);
-///
+
         /* Create the list of robots as obstacles at their initial locations. */
         std::vector<Rectangle> robotInitialObstacles;
         for (int i = 0; i < numRobots_; i++) {
             Rectangle robotRect;
-            // rectangle position at left corner
             robotRect.x = newState[i * 2] - sideLen;
             robotRect.y = newState[i * 2 + 1] - sideLen;
             robotRect.width = sideLen;
@@ -144,7 +135,7 @@ ompl::base::PlannerStatus ompl::geometric::dRRT::solve(const base::PlannerTermin
 
         for (int i = 0; i < numRobots_; i++) {
 
-            // Find the index of the nearest state in the roadmap
+            /* Need to find index of the nearest neighbor to search roadmap. */
             unsigned int stateIndex = -1;
             for (int j = 0; j < roadmap.size(); j++) {
                 const ompl::base::State *roadmapState = roadmap[j];
@@ -156,14 +147,17 @@ ompl::base::PlannerStatus ompl::geometric::dRRT::solve(const base::PlannerTermin
                     break;
                 }
             }
-///
-            // Find connected vertices with nearest state
-            // getEdges (unsigned int v, std::vector< unsigned int > &edgeList) const
+
+            /* Find the connected roadmap states & search for the best state */
             std::vector<unsigned int> edgeList;
             roadmapGraph->getEdges(stateIndex, edgeList);
-            double max = -1;
+
+            /* Initial max cos value to be overriden & initial first var to */
+            /* ensure the new motion is not null. Will let thru a collision */
+            /* state if all states are in collision. */
+            double maxCosTheta = -1;
             bool first = true;
-///
+
             /* For each connected roadmap state */
             for (int k = 0; k < edgeList.size(); k++) {
                 const ompl::base::State *state = roadmap[edgeList[k]];
@@ -177,10 +171,8 @@ ompl::base::PlannerStatus ompl::geometric::dRRT::solve(const base::PlannerTermin
 
                 double randomX = rmotionPosition[i * 2];
                 double randomY = rmotionPosition[i * 2 + 1];
-
                 double nearestX = nmotionPosition[i * 2];
                 double nearestY = nmotionPosition[i * 2 + 1];
-
                 double roadmapX = statePosition[0];
                 double roadmapY = statePosition[1];
 
@@ -193,7 +185,7 @@ ompl::base::PlannerStatus ompl::geometric::dRRT::solve(const base::PlannerTermin
                 double sideB_X = roadmapX - nearestX;
                 double sideB_Y = roadmapY - nearestY;
 
-                double cosValue = -1;
+                double cosTheta = -1;
                 /* Ensure the sides are non-zero */
                 if (!(sideA_X == 0 && sideA_Y == 0) && !(sideB_X == 0 && sideB_Y == 0)) {
                     double ADot = sideA_X * sideB_X;
@@ -202,18 +194,17 @@ ompl::base::PlannerStatus ompl::geometric::dRRT::solve(const base::PlannerTermin
                     double magA = sqrt(sideA_X * sideA_X + sideA_Y * sideA_Y);
                     double magB = sqrt(sideB_X * sideB_X + sideB_Y * sideB_Y);
 
-                    cosValue = (ADot + BDot) / (magA * magB);
+                    cosTheta = (ADot + BDot) / (magA * magB);
                 }
-///
-                // /* Create the list of robots as obstacles at their final locations. */
+
+                /* Create the list of robots as obstacles at their final locations. */
                 bool collide = false;
                 std::vector<std::vector<int>> collisionList;
 
-                std::vector<Rectangle> robotFinalObstacles;
                 if (!first) {
+                    std::vector<Rectangle> robotFinalObstacles;
                     for (int j = 0; j < i; j++) {
                         Rectangle robotRect;
-                        // rectangle position at left corner
                         robotRect.x = newState[j * 2] - sideLen;
                         robotRect.y = newState[j * 2 + 1] - sideLen;
                         robotRect.width = sideLen;
@@ -221,62 +212,59 @@ ompl::base::PlannerStatus ompl::geometric::dRRT::solve(const base::PlannerTermin
 
                         robotFinalObstacles.push_back(robotRect);
                     }
-                    std::cout << "getX" << stateSE2->getX() << std::endl;
                     /* Then check if the robots are collision-free. */
                     if (robotFinalObstacles.size() > 0) {
-                        if (!isValidStateSquare(stateSE2, sideLen, robotFinalObstacles)) {
-                             collide = true;
-                             break;
+                         if (!isValidStateSquare(stateSE2, sideLen, robotFinalObstacles)) {
+                              collide = true;
+                              break;
+                         }
+                    }
+
+                    /* Check if any possible invalid initial-final location collisions occurs. */
+                    for (int j = 0; j < robotInitialObstacles.size(); j++) {
+                        std::vector<Rectangle> initialObs = robotInitialObstacles;
+                        Rectangle rectInitial = initialObs[j];
+                        initialObs.erase(initialObs.begin() + j);
+
+                        std::vector<int> coll;
+                        for (int k = 0; k < robotInitialObstacles.size(); k++) {
+                            if (k == j) {
+                              continue;
+                            }
+                            std::vector<Rectangle> robotObs;
+                            robotObs.push_back(initialObs[k]);
+
+                            /* Check initial-final robot collision, add according to priority if true. */
+                            if (!isValidStateSquare(stateSE2, sideLen, robotInitialObstacles)) {
+                                coll.push_back(k);
+                                coll.push_back(j);
+                                collisionList.push_back(coll);
+                                break;
+                            }
                         }
                     }
-                }
+                    std::cout << "end collisionList" << std::endl;
 
-                /* Check if any possible invalid initial-final location collisions occurs. */
-                // for (int j = 0; j < robotInitialObstacles.size(); j++) {
-                //     std::vector<Rectangle> initialObs = robotInitialObstacles;
-                //     Rectangle rectInitial = initialObs[j];
-                //     initialObs.erase(initialObs.begin() + j);
-                //
-                //     std::vector<int> coll;
-                //     for (int k = 0; k < robotInitialObstacles.size(); k++) {
-                //         if (k == j) {
-                //           continue;
-                //         }
-                //         std::vector<Rectangle> robotObs;
-                //         robotObs.push_back(initialObs[k]);
-                //         if (!isValidStateSquare(stateSE2, sideLen, robotInitialObstacles)) {
-                //             coll.push_back(k);
-                //             coll.push_back(j);
-                //             collisionList.push_back(coll);
-                //             std::cout << "collisionList add: [" << k << ", " << j << "]" << std::endl;
-                //             std::cout << "locs: [" << x2 << ", " << y2 << "], [" << robotObs[0].x << ", " << robotObs[0].y << "]" << std::endl;
-                //             break;
-                //         }
-                //     }
-                // }
-                // std::cout << "end collisionList" << std::endl;
-                //
-                // /* Check initial-final collision tree & check for cycles. */
-                // /* Size 2 loops are the problem, while size 3+ can be navigated. */
-                // if (collisionList.size() > 1) {
-                //     for (int j = 0; j < collisionList.size() - 1; j++) {
-                //         for (int k = j; k < collisionList.size() - 1; k++) {
-                //             if (collisionList[j][0] == collisionList[k][1] && collisionList[j][1] == collisionList[k][0]) {
-                //                 std::cout << "initial-final loop collision caught" << std::endl;
-                //                 collide = true;
-                //                 break;
-                //             }
-                //         }
-                //         if (collide) {
-                //           break;
-                //         }
-                //    }
-                // }
+                    /* Check initial-final collision tree & check for cycles. */
+                    /* Size 2 loops are the problem, while size 3+ can be navigated. */
+                    if (collisionList.size() > 1) {
+                        for (int j = 0; j < collisionList.size() - 1; j++) {
+                            for (int k = j; k < collisionList.size() - 1; k++) {
+                                if (collisionList[j][0] == collisionList[k][1] && collisionList[j][1] == collisionList[k][0]) {
+                                    collide = true;
+                                    break;
+                                }
+                            }
+                            if (collide) {
+                              break;
+                            }
+                       }
+                   }
+              }
 
                 /* We keep the largest cosine value as the closest direction of roadmap state to random state */
-                if ((cosValue >= max) && (!collide || first)) {
-                    first = false;
-                    max = cosValue;
+                if ((cosTheta >= maxCosTheta) && (!collide || first)) {
+                    maxCosTheta = cosTheta;
                     newState[i * 2] = roadmapX;
                     newState[i * 2 + 1] = roadmapY;
                     newState[i + (numRobots_ * 2)] = stateTheta.value;
