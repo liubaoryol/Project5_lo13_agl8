@@ -29,7 +29,7 @@ void makeEnvironment1(std::vector<Rectangle> &obstacles)
 {
     struct Rectangle r1 = {-5.5, 5, 1, 5};
     struct Rectangle r2 = {-5.5, 5, 10.5, 1};
-    struct Rectangle r3 = {5, -7.5, 1, 11};
+    struct Rectangle r3 = {5, -7.5, 1, 11.5};
 
     obstacles.insert(obstacles.end(),  {r1, r2, r3});
 
