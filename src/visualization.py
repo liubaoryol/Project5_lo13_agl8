@@ -61,7 +61,7 @@ def plotRobots(obstacle_path, path):
         graph.plot(X, Y)
 
         # Plotting the actual box
-        boxVert = [[-0.3, -0.3], [0.3, -0.3], [0.3, 0.3], [-0.3, 0.3], [-0.3, -0.3]]
+        boxVert = [[-1.5, -1.5], [1.5, -1.5], [1.5, 1.5], [-1.5, 1.5], [-1.5, -1.5]]
 
         for p in traject:
             x = []
