@@ -89,28 +89,3 @@ def plotRoadmap(obstacle_path, roadmap):
     plt.axis([-10, 10, -10, 10])
     plt.show()
 
-
-
-if __name__ == '__main__':
-    print ("sys args is: ", sys.argv)
-    if len(sys.argv) == 2:
-        filename = sys.argv[1]
-    elif len(sys.argv) == 3:
-        obstacle_filename = sys.argv[1]
-        filename = sys.argv[2]
-    else:
-        print ('please input file name')
-#        filename = 'path.txt'
-
-    cspace, path = readPath(filename)
-    print ("cspace is: ", cspace)
-    if cspace == 'R2':
-        plotR2(path)
-    elif cspace == 'SE2':
-        plotSE2(obstacle_filename, path)
-    elif cspace == 'SE8':
-        plotSE8(obstacle_filename, path)
-    elif cspace == 'Roadmap':
-        plotRoadmap(obstacle_filename, path)
-    elif cspace == 'Weird':
-        plotWeird(path)
