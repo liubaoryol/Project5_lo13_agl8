@@ -160,9 +160,12 @@ ompl::base::PlannerStatus ompl::geometric::dRRT::solve(const base::PlannerTermin
             for (int k = 0; k < edgeList.size(); k++) {
                 const ompl::base::State *state = roadmap[edgeList[k]];
                 const ompl::base::CompoundStateSpace::StateType& stateCState = *state->as<ompl::base::CompoundStateSpace::StateType>();
-                const ompl::base::RealVectorStateSpace::StateType *stateSE2 = stateCState.as<ompl::base::RealVectorStateSpace::StateType>(0);
                 const ompl::base::RealVectorStateSpace::StateType &statePosition = *stateCState.as<ompl::base::RealVectorStateSpace::StateType>(0);
                 const ompl::base::SO2StateSpace::StateType &stateTheta = *stateCState.as<ompl::base::SO2StateSpace::StateType>(1);
+
+                const auto state2 = roadmap[edgeList[k]];
+                const auto cstate = state2->as<ompl::base::CompoundState>();
+                const auto stateSE2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
 
                 double randomX = rmotionPosition[i * 2];
                 double randomY = rmotionPosition[i * 2 + 1];
@@ -211,22 +214,14 @@ ompl::base::PlannerStatus ompl::geometric::dRRT::solve(const base::PlannerTermin
                 bool first = true;
                 std::vector<std::vector<int>> collisionList;
 
-                /* Then check if the robots are collision-free. */
-                if (robotFinalObstacles.size() > 0) {
-                    for (int j = 0; j < robotFinalObstacles.size(); j++) {
-                        Rectangle rectFinal = robotFinalObstacles[j];
+                std::cout << "state" << stateSE2->getX() << std::endl;
 
-                        /* Check final robot locations are collision-free. */
-                        double x = rectFinal.x + sideLen;
-                        double y = rectFinal.y + sideLen;
-                        double theta = newState[j + (numRobots_ * 2)];
-                        if (!isValidStateSquare(stateSE2, sideLen, robotFinalObstacles)) {
-                            collide = true;
-                            break;
-                        }
-                    }
-                }
-//
+                /* Then check if the robots are collision-free. */
+                // if (!isValidStateSquare(stateSE2, sideLen, robotFinalObstacles)) {
+                //     collide = true;
+                //     break;
+                // }
+
                 ///* Check if any possible invalid initial-final location collisions occurs. */
                 // for (int j = 0; j < robotInitialObstacles.size(); j++) {
                 //     std::vector<Rectangle> initialObs = robotInitialObstacles;

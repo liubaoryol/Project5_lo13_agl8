@@ -25,19 +25,10 @@ namespace og = ompl::geometric;
 
 const double sideLen = 0.9;
 
-bool isValidState(const ompl::base::State *state, double sideLength, const std::vector<Rectangle> &obstacles)
-{
-    // extract position space for collision detection
-    const auto cstate = state->as<ob::CompoundState>();
-    const auto pos = cstate->as<ob::SE2StateSpace::StateType>(0);
-
-    return isValidStateSquare(pos, sideLength, obstacles);;
-}
-
 void makeEnvironment1(std::vector<Rectangle> &obstacles)
 {
-    struct Rectangle r1 = {-2.5, 0, 2, 2};
-    struct Rectangle r2 = {0.5, 0, 2, 2};
+    Rectangle r1 = {-2.5, 0, 2, 2};
+    Rectangle r2 = {0.5, 0, 2, 2};
 
     obstacles.insert(obstacles.end(),  {r1, r2});
 }
@@ -79,9 +70,7 @@ void planMultipleRobots(std::vector<Rectangle> & obstacles)
     ompl::geometric::SimpleSetup ss(se2);
 
     // Setup the StateValidityChecker
-    og::SpaceInformation *si = ss->getSpaceInformation().get();
-    ss->setStateValidityChecker(
-        [si, obstacles](const ob::State *state) { return isStateValid(si, state, obstacles); });
+    ss.setStateValidityChecker(std::bind(isValidStateSquare, std::placeholders::_1, sideLen, obstacles));
 
     // Specify a planning algorithm to use
     auto planner = std::make_shared<ompl::geometric::PRM>(ss.getSpaceInformation());
@@ -123,7 +112,7 @@ void planMultipleRobots(std::vector<Rectangle> & obstacles)
 
     // Attempt to solve the problem within the givin time
     ss.solve(1.0);
-    planner->growRoadmap(5.0);
+    //planner->growRoadmap(5.0);
     planner->clearQuery();
 
     // Robot2
@@ -141,7 +130,7 @@ void planMultipleRobots(std::vector<Rectangle> & obstacles)
 
     // Attempt to solve the problem within the givin time
     ss.solve(1.0);
-    planner->growRoadmap(5.0);
+  //  planner->growRoadmap(5.0);
     planner->clearQuery();
 
     // Robot3
@@ -159,7 +148,7 @@ void planMultipleRobots(std::vector<Rectangle> & obstacles)
 
     // Attempt to solve the problem within the givin time
     ss.solve(1.0);
-    planner->growRoadmap(5.0);
+  //  planner->growRoadmap(5.0);
     planner->clearQuery();
 
     // Robot4
@@ -177,7 +166,7 @@ void planMultipleRobots(std::vector<Rectangle> & obstacles)
 
     // Attempt to solve the problem within the givin time
     ss.solve(10.0);
-    planner->growRoadmap(5.0);
+  //  planner->growRoadmap(5.0);
     planner->clearQuery();
 
     auto plannerData = std::make_shared<ob::PlannerData>(ss.getSpaceInformation());
@@ -223,9 +212,7 @@ void planMultipleRobots(std::vector<Rectangle> & obstacles)
     ompl::geometric::SimpleSetup robotSetup(se8);
 
     // Setup the StateValidityChecker
-    og::SpaceInformation *rsi = robotSetup->getSpaceInformation().get();
-    robotSetup->setStateValidityChecker(
-        [rsi, obstacles](const ob::State *state) { return isStateValid(si, state, obstacles); });
+    robotSetup.setStateValidityChecker(std::bind(isValidStateSquare, std::placeholders::_1, sideLen, obstacles));
 
     // Set start and goal state for composite states
     ob::ScopedState<> compositeStart(se8);
