@@ -11,6 +11,8 @@
 #include "dRRT.h"
 #include "math.h"
 #include "ompl/base/spaces/SO2StateSpace.h"
+#include "ompl/base/spaces/SE2StateSpace.h"
+#include <ompl/base/StateValidityChecker.h>
 #include "CollisionChecking.h"
 
 ompl::geometric::dRRT::dRRT(const base::SpaceInformationPtr &si) : base::Planner(si, "dRRT")
@@ -109,7 +111,12 @@ ompl::base::PlannerStatus ompl::geometric::dRRT::solve(const base::PlannerTermin
 ///
         /* define State list for x,y,theta of each robot */
         ompl::base::ScopedState<> newState(si_);
-        std::vector<ompl::base::State*> robotStates;
+        // std::vector<base::SE2StateSpace::StateType>(0)> robotStates;
+        // for (int i = 0; i < numRobots_; i++) {
+        //     robotStates[i]->setX(0.0);
+        //     robotStates[i]->setY(0.0);
+        //     robotStates[i]->setYaw(0.0);
+        // }
         for (int i = 0; i < (numRobots_ * 3); i++) {
             newState[i] = 0;
         }
@@ -155,6 +162,7 @@ ompl::base::PlannerStatus ompl::geometric::dRRT::solve(const base::PlannerTermin
             std::vector<unsigned int> edgeList;
             roadmapGraph->getEdges(stateIndex, edgeList);
             double max = -1;
+            bool first = true;
 ///
             /* For each connected roadmap state */
             for (int k = 0; k < edgeList.size(); k++) {
@@ -198,40 +206,36 @@ ompl::base::PlannerStatus ompl::geometric::dRRT::solve(const base::PlannerTermin
                 }
 ///
                 // /* Create the list of robots as obstacles at their final locations. */
-                std::vector<Rectangle> robotFinalObstacles;
-                for (int j = 0; j < i; j++) {
-                    Rectangle robotRect;
-                    // rectangle position at left corner
-                    robotRect.x = newState[j * 2] - sideLen;
-                    robotRect.y = newState[j * 2 + 1] - sideLen;
-                    robotRect.width = sideLen;
-                    robotRect.height = sideLen;
-
-                    robotFinalObstacles.push_back(robotRect);
-                }
-
                 bool collide = false;
-                bool first = true;
                 std::vector<std::vector<int>> collisionList;
 
-                std::cout << "state" << stateSE2->getX() << std::endl;
+                std::vector<Rectangle> robotFinalObstacles;
+                if (!first) {
+                    for (int j = 0; j < i; j++) {
+                        Rectangle robotRect;
+                        // rectangle position at left corner
+                        robotRect.x = newState[j * 2] - sideLen;
+                        robotRect.y = newState[j * 2 + 1] - sideLen;
+                        robotRect.width = sideLen;
+                        robotRect.height = sideLen;
 
-                /* Then check if the robots are collision-free. */
-                // if (!isValidStateSquare(stateSE2, sideLen, robotFinalObstacles)) {
-                //     collide = true;
-                //     break;
-                // }
+                        robotFinalObstacles.push_back(robotRect);
+                    }
+                    std::cout << "getX" << stateSE2->getX() << std::endl;
+                    /* Then check if the robots are collision-free. */
+                    if (robotFinalObstacles.size() > 0) {
+                        if (!isValidStateSquare(stateSE2, sideLen, robotFinalObstacles)) {
+                             collide = true;
+                             break;
+                        }
+                    }
+                }
 
-                ///* Check if any possible invalid initial-final location collisions occurs. */
+                /* Check if any possible invalid initial-final location collisions occurs. */
                 // for (int j = 0; j < robotInitialObstacles.size(); j++) {
                 //     std::vector<Rectangle> initialObs = robotInitialObstacles;
                 //     Rectangle rectInitial = initialObs[j];
                 //     initialObs.erase(initialObs.begin() + j);
-                //
-                //     /* Check final robot locations are collision-free. */
-                //     double x2 = rectInitial.x + sideLen;
-                //     double y2 = rectInitial.y + sideLen;
-                //     double theta2 = newState[j + (numRobots_ * 2)];
                 //
                 //     std::vector<int> coll;
                 //     for (int k = 0; k < robotInitialObstacles.size(); k++) {
@@ -240,7 +244,7 @@ ompl::base::PlannerStatus ompl::geometric::dRRT::solve(const base::PlannerTermin
                 //         }
                 //         std::vector<Rectangle> robotObs;
                 //         robotObs.push_back(initialObs[k]);
-                //         if (!isValidSquare(x2, y2, theta2, sideLen, robotObs)) {
+                //         if (!isValidStateSquare(stateSE2, sideLen, robotInitialObstacles)) {
                 //             coll.push_back(k);
                 //             coll.push_back(j);
                 //             collisionList.push_back(coll);
@@ -271,7 +275,7 @@ ompl::base::PlannerStatus ompl::geometric::dRRT::solve(const base::PlannerTermin
 
                 /* We keep the largest cosine value as the closest direction of roadmap state to random state */
                 if ((cosValue >= max) && (!collide || first)) {
-                    //first = false;
+                    first = false;
                     max = cosValue;
                     newState[i * 2] = roadmapX;
                     newState[i * 2 + 1] = roadmapY;
@@ -296,56 +300,6 @@ ompl::base::PlannerStatus ompl::geometric::dRRT::solve(const base::PlannerTermin
             approxdif = dist;
             approxsol = newMotion;
         }
-        // bool flag = true;
-        //
-        // std::vector<Rectangle> robotAsRectangle;
-        // for(int i = 0; i < 4; i++) {
-        //     Rectangle newRec;
-        //     // rectangle position at left corner
-        //     newRec.x = newState[i * 2] - sideLen;
-        //     newRec.y = newState[i * 2 + 1] - sideLen;
-        //     newRec.width = sideLen;
-        //     newRec.height = sideLen;
-        //
-        //     robotAsRectangle.push_back(newRec);
-        // }
-        //
-        // // Then check if four rectangles are collision-free with each other
-        // for(int j = 0; j < 4; j++) {
-        //     std::vector<Rectangle> obstacleList = robotAsRectangle;
-        //     Rectangle target = obstacleList[j];
-        //     obstacleList.erase(obstacleList.begin() + j);
-        //
-        //     // Make sure robot x, y is at center
-        //     double x = target.x + sideLen;
-        //     double y = target.y + sideLen;
-        //     double theta = newState[j + 8];
-        //     if(!isValidStateSquare(robotStates[j], sideLen, obstacleList)) {
-        //         flag = false;
-        //     }
-        // }
-        //
-        // // If four robots are collision-free then we add them into the Tree
-        // if(flag == true) {
-        //     auto *newMotion = new Motion(si_);
-        //     si_->copyState(newMotion->state, newState.get());
-        //     newMotion->parent = nmotion;
-        //     nn_->add(newMotion);
-        //
-        //     double dist = 0.0;
-        //     bool sat = goal->isSatisfied(newMotion->state, &dist);
-        //     if (sat)
-        //     {
-        //         approxdif = dist;
-        //         solution = newMotion;
-        //         break;
-        //     }
-        //     if (dist < approxdif)
-        //     {
-        //         approxdif = dist;
-        //         approxsol = newMotion;
-        //     }
-        // }
     }
 
     bool solved = false;

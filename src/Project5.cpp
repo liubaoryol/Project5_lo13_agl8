@@ -10,7 +10,7 @@
 #include <functional>
 #include <memory>
 #include <vector>
-#include <ompl/control/SpaceInformation.h>
+#include <ompl/base/SpaceInformation.h>
 #include <ompl/base/spaces/SE2StateSpace.h>
 #include <ompl/base/spaces/SO2StateSpace.h>
 #include <ompl/base/spaces/RealVectorStateSpace.h>
@@ -23,7 +23,7 @@ using namespace ompl;
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
 
-const double sideLen = 0.9;
+const double sideLen = 0.1;
 
 void makeEnvironment1(std::vector<Rectangle> &obstacles)
 {
